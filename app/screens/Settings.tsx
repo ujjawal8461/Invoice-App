@@ -1,4 +1,3 @@
-// app/screens/Home.tsx  (change filename/title for other screens)
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';

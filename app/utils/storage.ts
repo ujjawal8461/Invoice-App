@@ -1,4 +1,3 @@
-// src/utils/storage.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export async function saveJSON<T>(key: string, value: T): Promise<void> {

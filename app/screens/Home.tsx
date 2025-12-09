@@ -1,4 +1,3 @@
-// app/screens/Home.tsx
 import React from "react";
 import {
     View,
