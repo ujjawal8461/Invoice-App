@@ -13,6 +13,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList, InvoiceData } from "../types/navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from '@react-navigation/native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Preview">;
 
@@ -87,8 +89,8 @@ export default function Preview({ navigation, route }: Props) {
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [businessDetails, setBusinessDetails] = useState<BusinessDetails | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-    // Load invoices whenever screen comes into focus
     useFocusEffect(
         useCallback(() => {
             (async () => {
@@ -122,17 +124,11 @@ export default function Preview({ navigation, route }: Props) {
                     onPress: async () => {
                         try {
                             const updated = invoices.filter(inv => inv.id !== id);
-
-                            // update UI immediately
                             setInvoices(updated);
-
-                            // save to storage
                             await AsyncStorage.setItem(
                                 "invoices_v1",
                                 JSON.stringify(updated)
                             );
-
-                            // close preview if same invoice
                             if (selectedInvoice?.id === id) {
                                 closePreview();
                             }
@@ -146,13 +142,227 @@ export default function Preview({ navigation, route }: Props) {
         );
     }
 
+    // Generate HTML for PDF
+    function generateInvoiceHTML(invoice: Invoice, business: BusinessDetails): string {
+        const itemsHTML = invoice.items.map(item => {
+            const amount = item.ratePaise * item.quantity;
+            return `
+                <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.serviceName}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${(item.ratePaise / 100).toFixed(2)}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${(amount / 100).toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
 
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                        margin: 0;
+                        padding: 40px;
+                        color: #111827;
+                    }
+                    .invoice-container {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 40px;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                    }
+                    .header {
+                        border-bottom: 3px solid #0b74ff;
+                        padding-bottom: 20px;
+                        margin-bottom: 30px;
+                    }
+                    .business-name {
+                        font-size: 24px;
+                        font-weight: 800;
+                        color: #111827;
+                        margin-bottom: 10px;
+                    }
+                    .business-info {
+                        font-size: 12px;
+                        color: #6b7280;
+                        line-height: 1.6;
+                    }
+                    .invoice-title {
+                        text-align: center;
+                        font-size: 32px;
+                        font-weight: 900;
+                        color: #111827;
+                        margin: 30px 0;
+                        letter-spacing: 2px;
+                    }
+                    .details-section {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 30px;
+                    }
+                    .detail-label {
+                        font-size: 11px;
+                        color: #6b7280;
+                        font-weight: 600;
+                        margin-bottom: 4px;
+                    }
+                    .detail-value {
+                        font-size: 14px;
+                        color: #111827;
+                        font-weight: 700;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 30px;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        overflow: hidden;
+                    }
+                    th {
+                        background-color: #f3f4f6;
+                        padding: 12px;
+                        text-align: left;
+                        font-size: 12px;
+                        font-weight: 800;
+                        color: #374151;
+                        border-bottom: 2px solid #e5e7eb;
+                    }
+                    td {
+                        font-size: 13px;
+                    }
+                    .total-section {
+                        background-color: #f3f4f6;
+                        padding: 20px;
+                        border-radius: 8px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 30px;
+                    }
+                    .total-label {
+                        font-size: 18px;
+                        font-weight: 800;
+                        color: #374151;
+                    }
+                    .total-amount {
+                        font-size: 24px;
+                        font-weight: 900;
+                        color: #0b74ff;
+                    }
+                    .footer {
+                        text-align: center;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 13px;
+                        color: #6b7280;
+                        font-style: italic;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <div class="header">
+                        <div class="business-name">${business.businessName}</div>
+                        <div class="business-info">${business.address}</div>
+                        <div class="business-info">Phone: ${business.phone}</div>
+                        <div class="business-info">Email: ${business.email}</div>
+                        ${business.gst ? `<div class="business-info">GST: ${business.gst}</div>` : ''}
+                    </div>
+
+                    <div class="invoice-title">INVOICE</div>
+
+                    <div class="details-section">
+                        <div>
+                            <div class="detail-label">Bill To:</div>
+                            <div class="detail-value">${invoice.customerName}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="detail-label">Invoice No:</div>
+                            <div class="detail-value">${invoice.billNo}</div>
+                            <div class="detail-label" style="margin-top: 8px;">Date:</div>
+                            <div class="detail-value">${invoice.date}</div>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="text-align: right;">Rate</th>
+                                <th style="text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+
+                    <div class="total-section">
+                        <div class="total-label">Total Amount:</div>
+                        <div class="total-amount">₹${(invoice.totalPaise / 100).toFixed(2)}</div>
+                    </div>
+
+                    <div class="footer">
+                        Thank you for your business!
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+    }
 
     async function generatePDF() {
-        Alert.alert(
-            "Generate PDF",
-            "PDF generation will be implemented with react-native-pdf or similar library"
-        );
+        if (!selectedInvoice || !businessDetails) {
+            Alert.alert("Error", "Invoice data not available");
+            return;
+        }
+
+        setIsGeneratingPDF(true);
+        try {
+            const html = generateInvoiceHTML(selectedInvoice, businessDetails);
+
+            // Generate PDF
+            const { uri } = await Print.printToFileAsync({
+                html,
+                base64: false,
+            });
+
+            console.log('PDF generated at:', uri);
+
+            // Check if sharing is available
+            const isAvailable = await Sharing.isAvailableAsync();
+
+            if (isAvailable) {
+                // Share the PDF
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: `Invoice ${selectedInvoice.billNo}`,
+                    UTI: 'com.adobe.pdf',
+                });
+            } else {
+                Alert.alert(
+                    "PDF Generated",
+                    `PDF saved successfully at: ${uri}`,
+                    [{ text: "OK" }]
+                );
+            }
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            Alert.alert(
+                "Error",
+                "Failed to generate PDF. Please try again."
+            );
+        } finally {
+            setIsGeneratingPDF(false);
+        }
     }
 
     // Preview mode - showing selected invoice
@@ -163,8 +373,14 @@ export default function Preview({ navigation, route }: Props) {
                     <Pressable onPress={closePreview}>
                         <Text style={styles.backBtn}>← Back</Text>
                     </Pressable>
-                    <Pressable style={styles.pdfBtn} onPress={generatePDF}>
-                        <Text style={styles.pdfBtnText}>📄 Generate PDF</Text>
+                    <Pressable
+                        style={[styles.pdfBtn, isGeneratingPDF && styles.pdfBtnDisabled]}
+                        onPress={generatePDF}
+                        disabled={isGeneratingPDF}
+                    >
+                        <Text style={styles.pdfBtnText}>
+                            {isGeneratingPDF ? "Generating..." : "📄 Generate PDF"}
+                        </Text>
                     </Pressable>
                 </View>
 
@@ -380,6 +596,9 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 8,
+    },
+    pdfBtnDisabled: {
+        backgroundColor: "#93c5fd",
     },
     pdfBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
     previewScroll: { flex: 1 },
