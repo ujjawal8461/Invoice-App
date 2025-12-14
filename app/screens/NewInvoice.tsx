@@ -70,13 +70,14 @@ async function loadInvoices(): Promise<Invoice[]> {
 async function saveInvoice(invoice: Invoice): Promise<void> {
     try {
         const invoices = await loadInvoices();
-        invoices.push(invoice);
-        await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
+        const updated = [...invoices, invoice]; // no mutation
+        await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(updated));
     } catch (e) {
         console.warn("saveInvoice error:", e);
         throw e;
     }
 }
+
 
 export default function NewInvoice({ navigation }: Props) {
     const [customerName, setCustomerName] = useState("");

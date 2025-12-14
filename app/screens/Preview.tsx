@@ -1,5 +1,5 @@
 // app/screens/Preview.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList, InvoiceData } from "../types/navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Preview">;
 
@@ -47,18 +48,11 @@ async function loadInvoices(): Promise<Invoice[]> {
     }
 }
 
-async function saveInvoice(invoiceData: InvoiceData): Promise<void> {
+async function saveInvoices(invoices: Invoice[]): Promise<void> {
     try {
-        const invoices = await loadInvoices();
-        const newInvoice: Invoice = {
-            id: String(Date.now()),
-            ...invoiceData,
-            createdAt: Date.now(),
-        };
-        invoices.push(newInvoice);
         await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
     } catch (e) {
-        console.warn("saveInvoice error:", e);
+        console.warn("saveInvoices error:", e);
         throw e;
     }
 }
@@ -93,71 +87,30 @@ export default function Preview({ navigation, route }: Props) {
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [businessDetails, setBusinessDetails] = useState<BusinessDetails | null>(null);
     const [showPreview, setShowPreview] = useState(false);
-    const [previewData, setPreviewData] = useState<InvoiceData | null>(null);
-    const [isNewInvoice, setIsNewInvoice] = useState(false);
 
-    useEffect(() => {
-        (async () => {
-            const loaded = await loadInvoices();
-            setInvoices(loaded.sort((a, b) => b.createdAt - a.createdAt));
-            const business = await loadBusinessDetails();
-            setBusinessDetails(business);
-        })();
-
-        // Check if we have invoice data from navigation
-        if (route.params?.invoiceData) {
-            setPreviewData(route.params.invoiceData);
-            setIsNewInvoice(true);
-            setShowPreview(true);
-        }
-    }, [route.params]);
+    // Load invoices whenever screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            (async () => {
+                const loaded = await loadInvoices();
+                setInvoices(loaded.sort((a, b) => b.createdAt - a.createdAt));
+                const business = await loadBusinessDetails();
+                setBusinessDetails(business);
+            })();
+        }, [])
+    );
 
     function viewInvoice(invoice: Invoice) {
         setSelectedInvoice(invoice);
-        setIsNewInvoice(false);
         setShowPreview(true);
     }
 
     function closePreview() {
         setShowPreview(false);
         setSelectedInvoice(null);
-        setPreviewData(null);
-        setIsNewInvoice(false);
-
-        // Reset navigation params
-        if (route.params?.invoiceData) {
-            navigation.setParams({ invoiceData: undefined });
-        }
     }
 
-    async function handleGenerateInvoice() {
-        if (!previewData) return;
-
-        try {
-            await saveInvoice(previewData);
-            Alert.alert(
-                "Success",
-                "Invoice generated successfully!",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => {
-                            // Reload invoices and go back to list
-                            (async () => {
-                                const loaded = await loadInvoices();
-                                setInvoices(loaded.sort((a, b) => b.createdAt - a.createdAt));
-                                closePreview();
-                            })();
-                        },
-                    },
-                ]
-            );
-        } catch (e) {
-            Alert.alert("Error", "Failed to save invoice. Please try again.");
-        }
-    }
-
-    async function deleteInvoice(id: string) {
+    function deleteInvoice(id: string) {
         Alert.alert(
             "Delete Invoice",
             "Are you sure you want to delete this invoice?",
@@ -167,18 +120,33 @@ export default function Preview({ navigation, route }: Props) {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        const updated = invoices.filter((inv) => inv.id !== id);
-                        setInvoices(updated);
                         try {
-                            await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(updated));
+                            const updated = invoices.filter(inv => inv.id !== id);
+
+                            // update UI immediately
+                            setInvoices(updated);
+
+                            // save to storage
+                            await AsyncStorage.setItem(
+                                "invoices_v1",
+                                JSON.stringify(updated)
+                            );
+
+                            // close preview if same invoice
+                            if (selectedInvoice?.id === id) {
+                                closePreview();
+                            }
                         } catch (e) {
-                            console.warn("Delete error:", e);
+                            Alert.alert("Error", "Failed to delete invoice");
+                            console.error(e);
                         }
                     },
                 },
             ]
         );
     }
+
+
 
     async function generatePDF() {
         Alert.alert(
@@ -187,26 +155,17 @@ export default function Preview({ navigation, route }: Props) {
         );
     }
 
-    // Preview mode - showing either new invoice or existing invoice
-    if (showPreview && businessDetails) {
-        const displayData = isNewInvoice ? previewData : selectedInvoice;
-        if (!displayData) return null;
-
+    // Preview mode - showing selected invoice
+    if (showPreview && selectedInvoice && businessDetails) {
         return (
             <SafeAreaView style={styles.safe}>
                 <View style={styles.previewHeader}>
                     <Pressable onPress={closePreview}>
                         <Text style={styles.backBtn}>← Back</Text>
                     </Pressable>
-                    {isNewInvoice ? (
-                        <Pressable style={styles.generateBtn} onPress={handleGenerateInvoice}>
-                            <Text style={styles.generateBtnText}>✓ Generate Invoice</Text>
-                        </Pressable>
-                    ) : (
-                        <Pressable style={styles.pdfBtn} onPress={generatePDF}>
-                            <Text style={styles.pdfBtnText}>📄 Generate PDF</Text>
-                        </Pressable>
-                    )}
+                    <Pressable style={styles.pdfBtn} onPress={generatePDF}>
+                        <Text style={styles.pdfBtnText}>📄 Generate PDF</Text>
+                    </Pressable>
                 </View>
 
                 <ScrollView style={styles.previewScroll} contentContainerStyle={styles.previewContent}>
@@ -232,13 +191,13 @@ export default function Preview({ navigation, route }: Props) {
                         <View style={styles.detailsRow}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.detailLabel}>Bill To:</Text>
-                                <Text style={styles.detailValue}>{displayData.customerName}</Text>
+                                <Text style={styles.detailValue}>{selectedInvoice.customerName}</Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>
                                 <Text style={styles.detailLabel}>Invoice No:</Text>
-                                <Text style={styles.detailValue}>{displayData.billNo}</Text>
+                                <Text style={styles.detailValue}>{selectedInvoice.billNo}</Text>
                                 <Text style={styles.detailLabel}>Date:</Text>
-                                <Text style={styles.detailValue}>{displayData.date}</Text>
+                                <Text style={styles.detailValue}>{selectedInvoice.date}</Text>
                             </View>
                         </View>
 
@@ -257,14 +216,14 @@ export default function Preview({ navigation, route }: Props) {
                                 </Text>
                             </View>
 
-                            {displayData.items.map((item, idx) => {
+                            {selectedInvoice.items.map((item, idx) => {
                                 const amount = item.ratePaise * item.quantity;
                                 return (
                                     <View
                                         key={item.id}
                                         style={[
                                             styles.tableRow,
-                                            idx === displayData.items.length - 1 && styles.tableRowLast,
+                                            idx === selectedInvoice.items.length - 1 && styles.tableRowLast,
                                         ]}
                                     >
                                         <Text style={[styles.tableCell, { flex: 2 }]}>
@@ -288,7 +247,7 @@ export default function Preview({ navigation, route }: Props) {
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total Amount:</Text>
                             <Text style={styles.totalValue}>
-                                ₹{(displayData.totalPaise / 100).toFixed(2)}
+                                ₹{(selectedInvoice.totalPaise / 100).toFixed(2)}
                             </Text>
                         </View>
 
@@ -416,13 +375,6 @@ const styles = StyleSheet.create({
         borderBottomColor: "#e5e7eb",
     },
     backBtn: { fontSize: 16, color: "#0b74ff", fontWeight: "700" },
-    generateBtn: {
-        backgroundColor: "#10b981",
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-    },
-    generateBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
     pdfBtn: {
         backgroundColor: "#0b74ff",
         paddingVertical: 8,
