@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Preview">;
 
@@ -84,12 +85,216 @@ async function loadBusinessDetails(): Promise<BusinessDetails> {
     }
 }
 
+// Load HTML template from assets
+async function loadHTMLTemplate(): Promise<string> {
+    try {
+        console.log("🔍 Starting to load HTML template...");
+
+        // Load the asset
+        const asset = Asset.fromModule(require('../../assets/invoice-template.html'));
+        console.log("📦 Asset module loaded:", asset);
+
+        await asset.downloadAsync();
+        console.log("✅ Asset downloaded");
+
+        // Fetch the content
+        const response = await fetch(asset.localUri || asset.uri);
+        const htmlContent = await response.text();
+
+        console.log("📄 HTML Content loaded, length:", htmlContent.length);
+        console.log("📄 First 200 chars:", htmlContent.substring(0, 200));
+
+        return htmlContent;
+    } catch (e) {
+        console.error("❌ Error loading HTML template:", e);
+        console.log("⚠️ Using fallback default template");
+        // Fallback to default template if loading fails
+        return getDefaultTemplate();
+    }
+}
+
+// Fallback default template (your original HTML)
+function getDefaultTemplate(): string {
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    margin: 0;
+                    padding: 40px;
+                    color: #111827;
+                }
+                .invoice-container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 40px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                }
+                .header {
+                    border-bottom: 3px solid #0b74ff;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+                .business-name {
+                    font-size: 24px;
+                    font-weight: 800;
+                    color: #111827;
+                    margin-bottom: 10px;
+                }
+                .business-info {
+                    font-size: 12px;
+                    color: #6b7280;
+                    line-height: 1.6;
+                }
+                .invoice-title {
+                    text-align: center;
+                    font-size: 32px;
+                    font-weight: 900;
+                    color: #111827;
+                    margin: 30px 0;
+                    letter-spacing: 2px;
+                }
+                .details-section {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 30px;
+                }
+                .detail-label {
+                    font-size: 11px;
+                    color: #6b7280;
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                }
+                .detail-value {
+                    font-size: 14px;
+                    color: #111827;
+                    font-weight: 700;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 30px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                th {
+                    background-color: #f3f4f6;
+                    padding: 12px;
+                    text-align: left;
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: #374151;
+                    border-bottom: 2px solid #e5e7eb;
+                }
+                td {
+                    font-size: 13px;
+                }
+                .total-section {
+                    background-color: #f3f4f6;
+                    padding: 20px;
+                    border-radius: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 30px;
+                }
+                .total-label {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #374151;
+                }
+                .total-amount {
+                    font-size: 24px;
+                    font-weight: 900;
+                    color: #0b74ff;
+                }
+                .footer {
+                    text-align: center;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                    font-size: 13px;
+                    color: #6b7280;
+                    font-style: italic;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-container">
+                <div class="header">
+                    <div class="business-name">{{BUSINESS_NAME}}</div>
+                    <div class="business-info">{{ADDRESS}}</div>
+                    <div class="business-info">Phone: {{PHONE}}</div>
+                    <div class="business-info">Email: {{EMAIL}}</div>
+                    <div class="business-info">GST: {{GST}}</div>
+                </div>
+
+                <div class="invoice-title">INVOICE</div>
+
+                <div class="details-section">
+                    <div>
+                        <div class="detail-label">Bill To:</div>
+                        <div class="detail-value">{{CUSTOMER_NAME}}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="detail-label">Invoice No:</div>
+                        <div class="detail-value">{{BILL_NO}}</div>
+                        <div class="detail-label" style="margin-top: 8px;">Date:</div>
+                        <div class="detail-value">{{DATE}}</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th style="text-align: center;">Qty</th>
+                            <th style="text-align: right;">Rate</th>
+                            <th style="text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ITEMS_TABLE}}
+                    </tbody>
+                </table>
+
+                <div class="total-section">
+                    <div class="total-label">Total Amount:</div>
+                    <div class="total-amount">₹{{TOTAL}}</div>
+                </div>
+
+                <div class="footer">
+                    Thank you for your business!
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
 export default function Preview({ navigation, route }: Props) {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [businessDetails, setBusinessDetails] = useState<BusinessDetails | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [htmlTemplate, setHtmlTemplate] = useState<string>("");
+
+    // Load HTML template once when component mounts
+    useEffect(() => {
+        (async () => {
+            console.log("🚀 Component mounted, loading template...");
+            const template = await loadHTMLTemplate();
+            console.log("✅ Template loaded into state, length:", template.length);
+            setHtmlTemplate(template);
+        })();
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -142,8 +347,24 @@ export default function Preview({ navigation, route }: Props) {
         );
     }
 
-    // Generate HTML for PDF
+    // Generate HTML for PDF using template
     function generateInvoiceHTML(invoice: Invoice, business: BusinessDetails): string {
+        // Use loaded template or fallback
+        let html = htmlTemplate || getDefaultTemplate();
+
+        // Replace business details placeholders
+        html = html.replace(/\{\{BUSINESS_NAME\}\}/g, business.businessName);
+        html = html.replace(/\{\{ADDRESS\}\}/g, business.address);
+        html = html.replace(/\{\{PHONE\}\}/g, business.phone);
+        html = html.replace(/\{\{EMAIL\}\}/g, business.email);
+        html = html.replace(/\{\{GST\}\}/g, business.gst || '');
+
+        // Replace invoice details placeholders
+        html = html.replace(/\{\{BILL_NO\}\}/g, invoice.billNo);
+        html = html.replace(/\{\{DATE\}\}/g, invoice.date);
+        html = html.replace(/\{\{CUSTOMER_NAME\}\}/g, invoice.customerName);
+
+        // Generate items table rows
         const itemsHTML = invoice.items.map(item => {
             const amount = item.ratePaise * item.quantity;
             return `
@@ -156,167 +377,12 @@ export default function Preview({ navigation, route }: Props) {
             `;
         }).join('');
 
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                        margin: 0;
-                        padding: 40px;
-                        color: #111827;
-                    }
-                    .invoice-container {
-                        max-width: 800px;
-                        margin: 0 auto;
-                        background: white;
-                        padding: 40px;
-                        border: 1px solid #e5e7eb;
-                        border-radius: 8px;
-                    }
-                    .header {
-                        border-bottom: 3px solid #0b74ff;
-                        padding-bottom: 20px;
-                        margin-bottom: 30px;
-                    }
-                    .business-name {
-                        font-size: 24px;
-                        font-weight: 800;
-                        color: #111827;
-                        margin-bottom: 10px;
-                    }
-                    .business-info {
-                        font-size: 12px;
-                        color: #6b7280;
-                        line-height: 1.6;
-                    }
-                    .invoice-title {
-                        text-align: center;
-                        font-size: 32px;
-                        font-weight: 900;
-                        color: #111827;
-                        margin: 30px 0;
-                        letter-spacing: 2px;
-                    }
-                    .details-section {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 30px;
-                    }
-                    .detail-label {
-                        font-size: 11px;
-                        color: #6b7280;
-                        font-weight: 600;
-                        margin-bottom: 4px;
-                    }
-                    .detail-value {
-                        font-size: 14px;
-                        color: #111827;
-                        font-weight: 700;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 30px;
-                        border: 1px solid #e5e7eb;
-                        border-radius: 8px;
-                        overflow: hidden;
-                    }
-                    th {
-                        background-color: #f3f4f6;
-                        padding: 12px;
-                        text-align: left;
-                        font-size: 12px;
-                        font-weight: 800;
-                        color: #374151;
-                        border-bottom: 2px solid #e5e7eb;
-                    }
-                    td {
-                        font-size: 13px;
-                    }
-                    .total-section {
-                        background-color: #f3f4f6;
-                        padding: 20px;
-                        border-radius: 8px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 30px;
-                    }
-                    .total-label {
-                        font-size: 18px;
-                        font-weight: 800;
-                        color: #374151;
-                    }
-                    .total-amount {
-                        font-size: 24px;
-                        font-weight: 900;
-                        color: #0b74ff;
-                    }
-                    .footer {
-                        text-align: center;
-                        padding-top: 20px;
-                        border-top: 1px solid #e5e7eb;
-                        font-size: 13px;
-                        color: #6b7280;
-                        font-style: italic;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="invoice-container">
-                    <div class="header">
-                        <div class="business-name">${business.businessName}</div>
-                        <div class="business-info">${business.address}</div>
-                        <div class="business-info">Phone: ${business.phone}</div>
-                        <div class="business-info">Email: ${business.email}</div>
-                        ${business.gst ? `<div class="business-info">GST: ${business.gst}</div>` : ''}
-                    </div>
+        html = html.replace(/\{\{ITEMS_TABLE\}\}/g, itemsHTML);
 
-                    <div class="invoice-title">INVOICE</div>
+        // Replace total
+        html = html.replace(/\{\{TOTAL\}\}/g, (invoice.totalPaise / 100).toFixed(2));
 
-                    <div class="details-section">
-                        <div>
-                            <div class="detail-label">Bill To:</div>
-                            <div class="detail-value">${invoice.customerName}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div class="detail-label">Invoice No:</div>
-                            <div class="detail-value">${invoice.billNo}</div>
-                            <div class="detail-label" style="margin-top: 8px;">Date:</div>
-                            <div class="detail-value">${invoice.date}</div>
-                        </div>
-                    </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Service</th>
-                                <th style="text-align: center;">Qty</th>
-                                <th style="text-align: right;">Rate</th>
-                                <th style="text-align: right;">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHTML}
-                        </tbody>
-                    </table>
-
-                    <div class="total-section">
-                        <div class="total-label">Total Amount:</div>
-                        <div class="total-amount">₹${(invoice.totalPaise / 100).toFixed(2)}</div>
-                    </div>
-
-                    <div class="footer">
-                        Thank you for your business!
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
+        return html;
     }
 
     async function generatePDF() {

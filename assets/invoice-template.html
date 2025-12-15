@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Invoice</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            color: #000;
+            padding: 24px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .company-name {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .company-details {
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .contact {
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .invoice-info {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .totals {
+            margin-top: 20px;
+            width: 40%;
+            margin-left: auto;
+        }
+
+        .totals td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="contact">
+        Mob: {{mobile1}}<br />
+        Mob (W): {{mobile2}}
+    </div>
+
+    <div class="header">
+        <div class="company-name">Ujjawal Refrigeration</div>
+        <div class="company-details">
+            53/8, Samajwadi Indra Nagar,<br />
+            Behind Polytechnic College, Indore
+        </div>
+    </div>
+
+    <!-- INVOICE INFO -->
+    <div class="invoice-info">
+        <div>
+            <strong>Invoice No:</strong> {{invoiceNumber}}<br />
+            <strong>Date:</strong> {{invoiceDate}}
+        </div>
+        <div>
+            <strong>Customer Name:</strong> {{customerName}}<br />
+            <strong>Address:</strong> {{customerAddress}}
+        </div>
+    </div>
+
+    <!-- ITEMS TABLE -->
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Rate</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{items}}
+        </tbody>
+    </table>
+
+    <!-- TOTALS -->
+    <table class="totals">
+        <tr>
+            <td><strong>Subtotal</strong></td>
+            <td>₹{{subTotal}}</td>
+        </tr>
+        <tr>
+            <td><strong>GST</strong></td>
+            <td>₹{{gst}}</td>
+        </tr>
+        <tr>
+            <td><strong>Grand Total</strong></td>
+            <td><strong>₹{{grandTotal}}</strong></td>
+        </tr>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        Thank you for your business!
+    </div>
+
+</body>
+
+</html>
