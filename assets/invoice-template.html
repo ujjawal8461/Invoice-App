@@ -80,27 +80,28 @@
 
     <!-- HEADER -->
     <div class="contact">
-        Mob: {{mobile1}}<br />
-        Mob (W): {{mobile2}}
+        Phone: {{PHONE}}<br />
+        Email: {{EMAIL}}
     </div>
 
     <div class="header">
-        <div class="company-name">Ujjawal Refrigeration</div>
+        <div class="company-name">{{BUSINESS_NAME}}</div>
         <div class="company-details">
-            53/8, Samajwadi Indra Nagar,<br />
-            Behind Polytechnic College, Indore
+            {{ADDRESS}}
+        </div>
+        <div class="company-details" style="margin-top: 8px;">
+            GST: {{GST}}
         </div>
     </div>
 
     <!-- INVOICE INFO -->
     <div class="invoice-info">
         <div>
-            <strong>Invoice No:</strong> {{invoiceNumber}}<br />
-            <strong>Date:</strong> {{invoiceDate}}
+            <strong>Invoice No:</strong> {{BILL_NO}}<br />
+            <strong>Date:</strong> {{DATE}}
         </div>
         <div>
-            <strong>Customer Name:</strong> {{customerName}}<br />
-            <strong>Address:</strong> {{customerAddress}}
+            <strong>Customer Name:</strong> {{CUSTOMER_NAME}}
         </div>
     </div>
 
@@ -116,23 +117,15 @@
             </tr>
         </thead>
         <tbody>
-            {{items}}
+            {{ITEMS_TABLE}}
         </tbody>
     </table>
 
     <!-- TOTALS -->
     <table class="totals">
         <tr>
-            <td><strong>Subtotal</strong></td>
-            <td>₹{{subTotal}}</td>
-        </tr>
-        <tr>
-            <td><strong>GST</strong></td>
-            <td>₹{{gst}}</td>
-        </tr>
-        <tr>
             <td><strong>Grand Total</strong></td>
-            <td><strong>₹{{grandTotal}}</strong></td>
+            <td><strong>₹{{TOTAL}}</strong></td>
         </tr>
     </table>
 

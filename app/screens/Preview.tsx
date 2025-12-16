@@ -349,8 +349,14 @@ export default function Preview({ navigation, route }: Props) {
 
     // Generate HTML for PDF using template
     function generateInvoiceHTML(invoice: Invoice, business: BusinessDetails): string {
+        console.log("🎨 Generating invoice HTML...");
+        console.log("📝 htmlTemplate state length:", htmlTemplate.length);
+
         // Use loaded template or fallback
         let html = htmlTemplate || getDefaultTemplate();
+
+        console.log("📋 Using template length:", html.length);
+        console.log("📋 Template preview:", html.substring(0, 300));
 
         // Replace business details placeholders
         html = html.replace(/\{\{BUSINESS_NAME\}\}/g, business.businessName);
@@ -365,14 +371,15 @@ export default function Preview({ navigation, route }: Props) {
         html = html.replace(/\{\{CUSTOMER_NAME\}\}/g, invoice.customerName);
 
         // Generate items table rows
-        const itemsHTML = invoice.items.map(item => {
+        const itemsHTML = invoice.items.map((item, index) => {
             const amount = item.ratePaise * item.quantity;
             return `
                 <tr>
-                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.serviceName}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${(item.ratePaise / 100).toFixed(2)}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${(amount / 100).toFixed(2)}</td>
+                    <td style="padding: 8px; text-align: center;">${index + 1}</td>
+                    <td style="padding: 8px;">${item.serviceName}</td>
+                    <td style="padding: 8px; text-align: center;">${item.quantity}</td>
+                    <td style="padding: 8px; text-align: right;">₹${(item.ratePaise / 100).toFixed(2)}</td>
+                    <td style="padding: 8px; text-align: right;">₹${(amount / 100).toFixed(2)}</td>
                 </tr>
             `;
         }).join('');
@@ -381,6 +388,8 @@ export default function Preview({ navigation, route }: Props) {
 
         // Replace total
         html = html.replace(/\{\{TOTAL\}\}/g, (invoice.totalPaise / 100).toFixed(2));
+
+        console.log("✅ HTML generation complete, final length:", html.length);
 
         return html;
     }
