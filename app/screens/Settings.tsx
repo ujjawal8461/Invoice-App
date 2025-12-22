@@ -20,7 +20,6 @@ type BusinessDetails = {
     address: string;
     phone: string;
     email: string;
-    gst: string;
 };
 
 const BUSINESS_KEY = 'business_details_v1';
@@ -32,22 +31,20 @@ async function loadBusinessDetails(): Promise<BusinessDetails> {
         const raw = await AsyncStorage.getItem(BUSINESS_KEY);
         if (!raw) {
             return {
-                businessName: 'Your Business Name',
-                address: '123 Business Street, City',
-                phone: '+91 98765 43210',
-                email: 'business@example.com',
-                gst: 'GSTIN1234567890',
+                businessName: 'Ujjawal Refrigeration',
+                address: '53/8, Samajwadi Indra Nagar, Behind: Polytechnic College Indore',
+                phone: 'Mob.9893222107\nMob(W).9039378360',
+                email: 'ujjawal.refrigeration@gmail.com',
             };
         }
         return JSON.parse(raw) as BusinessDetails;
     } catch (e) {
         console.warn('loadBusinessDetails error:', e);
         return {
-            businessName: 'Your Business Name',
-            address: '123 Business Street, City',
-            phone: '+91 98765 43210',
-            email: 'business@example.com',
-            gst: 'GSTIN1234567890',
+            businessName: 'Ujjawal Refrigeration',
+            address: '53/8, Samajwadi Indra Nagar, Behind: Polytechnic College Indore',
+            phone: 'Mob.9893222107\nMob(W).9039378360',
+            email: 'ujjawal.refrigeration@gmail.com',
         };
     }
 }
@@ -66,7 +63,6 @@ export default function Settings({ navigation }: Props) {
     const [address, setAddress] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
-    const [gst, setGst] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -76,7 +72,6 @@ export default function Settings({ navigation }: Props) {
             setAddress(details.address);
             setPhone(details.phone);
             setEmail(details.email);
-            setGst(details.gst);
         })();
     }, []);
 
@@ -93,7 +88,6 @@ export default function Settings({ navigation }: Props) {
                 address: address.trim(),
                 phone: phone.trim(),
                 email: email.trim(),
-                gst: gst.trim(),
             };
             await saveBusinessDetails(details);
             Alert.alert('Success', 'Business details saved successfully!');
@@ -122,13 +116,11 @@ export default function Settings({ navigation }: Props) {
                         ])
                             .then(() => {
                                 Alert.alert('Success', 'All data cleared successfully');
-                                // Reset to defaults
                                 loadBusinessDetails().then(defaults => {
                                     setBusinessName(defaults.businessName);
                                     setAddress(defaults.address);
                                     setPhone(defaults.phone);
                                     setEmail(defaults.email);
-                                    setGst(defaults.gst);
                                 });
                             })
                             .catch((e) => {
@@ -171,12 +163,15 @@ export default function Settings({ navigation }: Props) {
                     />
 
                     <Text style={styles.label}>Phone Number</Text>
+                    <Text style={styles.hint}>Tip: Use line breaks for multiple numbers (press Enter)</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, styles.textArea]}
                         value={phone}
                         onChangeText={setPhone}
-                        placeholder="+91 98765 43210"
+                        placeholder="Mob.9893222107&#10;Mob(W).9039378360"
                         placeholderTextColor="#999"
+                        multiline
+                        numberOfLines={2}
                         keyboardType="phone-pad"
                     />
 
@@ -189,16 +184,6 @@ export default function Settings({ navigation }: Props) {
                         placeholderTextColor="#999"
                         keyboardType="email-address"
                         autoCapitalize="none"
-                    />
-
-                    <Text style={styles.label}>GST Number</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={gst}
-                        onChangeText={setGst}
-                        placeholder="GSTIN1234567890"
-                        placeholderTextColor="#999"
-                        autoCapitalize="characters"
                     />
                 </View>
 
@@ -255,6 +240,12 @@ const styles = StyleSheet.create({
         color: '#374151',
         marginTop: 12,
         marginBottom: 6,
+    },
+    hint: {
+        fontSize: 12,
+        color: '#6b7280',
+        marginBottom: 4,
+        fontStyle: 'italic',
     },
     input: {
         borderWidth: 1,

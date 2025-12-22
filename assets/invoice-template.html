@@ -4,134 +4,169 @@
 <head>
     <meta charset="UTF-8" />
     <title>Invoice</title>
-
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 14px;
             color: #000;
-            padding: 24px;
+            padding: 20px;
+            line-height: 1.4;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
+        .phone {
+            font-size: 13px;
+            margin-bottom: 6px;
+            white-space: pre-line;
         }
 
-        .company-name {
-            font-size: 32px;
+        .business {
+            font-size: 22px;
             font-weight: bold;
-            letter-spacing: 1px;
+            margin-bottom: 6px;
         }
 
-        .company-details {
-            font-size: 14px;
-            margin-top: 4px;
+        .address {
+            font-size: 13px;
+            margin-bottom: 6px;
         }
 
-        .contact {
-            text-align: right;
+        .email {
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .header-box {
+            border: 2px solid #000;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
             font-size: 13px;
         }
 
-        .invoice-info {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
+        .customer-box {
+            border-left: 2px solid #000;
+            border-right: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 8px;
+            font-size: 13px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
 
         th,
         td {
-            border: 1px solid #000;
+            border: 2px solid #000;
             padding: 8px;
-            text-align: left;
+            font-size: 13px;
         }
 
         th {
-            background-color: #f2f2f2;
-        }
-
-        .totals {
-            margin-top: 20px;
-            width: 40%;
-            margin-left: auto;
-        }
-
-        .totals td {
-            border: 1px solid #000;
-            padding: 8px;
-        }
-
-        .footer {
-            margin-top: 40px;
-            font-size: 12px;
             text-align: center;
+            font-weight: bold;
+        }
+
+        td.center {
+            text-align: center;
+        }
+
+        td.right {
+            text-align: right;
+        }
+
+        .empty td {
+            padding: 14px;
+            border-left: 2px solid #000;
+            border-right: 2px solid #000;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .words {
+            border-left: 2px solid #000;
+            border-right: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .total {
+            border-left: 2px solid #000;
+            border-right: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 14px;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- HEADER -->
-    <div class="contact">
-        Phone: {{PHONE}}<br />
-        Email: {{EMAIL}}
+    <div class="phone">{{PHONE}}</div>
+
+    <div class="business">{{BUSINESS_NAME}}</div>
+
+    <div class="address">{{ADDRESS}}</div>
+
+    <div class="email">{{EMAIL}}</div>
+
+    <div class="header-box">
+        <div><strong>Bill no.:</strong> {{BILL_NO}}</div>
+        <div><strong>Date:</strong> {{DATE}}</div>
     </div>
 
-    <div class="header">
-        <div class="company-name">{{BUSINESS_NAME}}</div>
-        <div class="company-details">
-            {{ADDRESS}}
-        </div>
-        <div class="company-details" style="margin-top: 8px;">
-            GST: {{GST}}
-        </div>
+    <div class="customer-box">
+        <strong>M/S:</strong> {{CUSTOMER_NAME}}
     </div>
 
-    <!-- INVOICE INFO -->
-    <div class="invoice-info">
-        <div>
-            <strong>Invoice No:</strong> {{BILL_NO}}<br />
-            <strong>Date:</strong> {{DATE}}
-        </div>
-        <div>
-            <strong>Customer Name:</strong> {{CUSTOMER_NAME}}
-        </div>
-    </div>
-
-    <!-- ITEMS TABLE -->
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Description</th>
-                <th>Qty</th>
-                <th>Rate</th>
-                <th>Amount</th>
+                <th style="width:8%">Sr. No.</th>
+                <th style="width:44%">Description</th>
+                <th style="width:12%">Quantity</th>
+                <th style="width:18%">Rate</th>
+                <th style="width:18%">Amount</th>
             </tr>
         </thead>
         <tbody>
             {{ITEMS_TABLE}}
+
+            <tr class="empty">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr class="empty">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr class="empty">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
         </tbody>
     </table>
 
-    <!-- TOTALS -->
-    <table class="totals">
-        <tr>
-            <td><strong>Grand Total</strong></td>
-            <td><strong>₹{{TOTAL}}</strong></td>
-        </tr>
-    </table>
+    <div class="words">
+        <strong>Rupees (in words):</strong> {{AMOUNT_WORDS}}
+    </div>
 
-    <!-- FOOTER -->
-    <div class="footer">
-        Thank you for your business!
+    <div class="total">
+        <span>Total Amount</span>
+        <span>₹{{TOTAL}}</span>
     </div>
 
 </body>
