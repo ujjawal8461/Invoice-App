@@ -10,6 +10,7 @@ import {
     Alert,
     Platform,
 } from "react-native";
+import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList, InvoiceData } from "../types/navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,15 +48,6 @@ async function loadInvoices(): Promise<Invoice[]> {
     } catch (e) {
         console.warn("loadInvoices error:", e);
         return [];
-    }
-}
-
-async function saveInvoices(invoices: Invoice[]): Promise<void> {
-    try {
-        await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
-    } catch (e) {
-        console.warn("saveInvoices error:", e);
-        throw e;
     }
 }
 
@@ -127,7 +119,7 @@ function amountToWords(amountInRupees: number): string {
     return words;
 }
 
-// EMBEDDED HTML TEMPLATE - No file loading needed
+// SINGLE HTML TEMPLATE - Highly Customizable
 function getInvoiceTemplate(): string {
     return `<!DOCTYPE html>
 <html>
@@ -136,227 +128,179 @@ function getInvoiceTemplate(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 14px;
-            color: #000;
+            margin: 0;
             padding: 20px;
-            line-height: 1.4;
         }
-
-        .mobile-numbers {
-            text-align: left;
-            font-size: 13px;
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .phone {
+            font-size: 14px;
             margin-bottom: 10px;
-            font-weight: 500;
+            text-align: right;
         }
-
         .business-name {
             font-size: 28px;
             font-weight: bold;
-            text-align: left;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
-
         .address {
-            font-size: 13px;
-            text-align: left;
-            margin-bottom: 15px;
-            line-height: 1.5;
+            font-size: 14px;
+            margin-bottom: 5px;
         }
-
         .email {
-            font-size: 12px;
-            text-align: left;
+            font-size: 14px;
             margin-bottom: 20px;
-            color: #333;
         }
-
-        .invoice-header {
-            border: 2px solid #000;
-            padding: 10px;
-            margin-bottom: 0;
-        }
-
-        .invoice-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .invoice-details-left,
-        .invoice-details-right {
-            font-size: 13px;
-        }
-
-        .invoice-details-left strong,
-        .invoice-details-right strong {
-            font-weight: bold;
-        }
-
-        .customer-section {
-            border-left: 2px solid #000;
-            border-right: 2px solid #000;
-            border-bottom: 2px solid #000;
-            padding: 10px;
-            margin-bottom: 0;
-        }
-
-        .customer-label {
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        .items-table {
+        table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0;
         }
-
-        .items-table th {
-            border: 2px solid #000;
-            padding: 8px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: bold;
-            background-color: #f5f5f5;
+        .header-table td {
+            border: none;
+            padding: 0;
         }
-
+        .bill-line {
+            border-top: 2px solid black;
+            border-bottom: 2px solid black;
+            padding: 8px 0;
+        }
+        .bill-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .customer-line {
+            border-bottom: 2px solid black;
+            padding: 10px 0 15px 0;
+            font-size: 14px;
+        }
+        .items-table {
+            margin-top: 20px;
+        }
+        .items-table th,
         .items-table td {
-            border: 2px solid #000;
-            padding: 8px;
-            font-size: 13px;
-        }
-
-        .items-table td.center {
+            border: 2px solid black;
+            padding: 10px;
             text-align: center;
+            font-size: 14px;
         }
-
+        .items-table th {
+            font-weight: bold;
+        }
+        .items-table td.description {
+            text-align: left;
+        }
         .items-table td.right {
             text-align: right;
         }
-
-        .amount-words {
-            border-left: 2px solid #000;
-            border-right: 2px solid #000;
-            border-bottom: 2px solid #000;
-            padding: 10px;
-            font-size: 13px;
-            margin-bottom: 0;
+        .empty-space {
+            height: 300px; /* large empty space like in the image */
         }
-
-        .amount-words strong {
-            font-weight: bold;
+        .words-line {
+            border-top: 2px solid black;
+            border-bottom: 2px solid black;
+            padding: 10px 0;
+            font-size: 14px;
         }
-
         .total-section {
-            border-left: 2px solid #000;
-            border-right: 2px solid #000;
-            border-bottom: 2px solid #000;
-            padding: 10px;
+            display: flex;
+            justify-content: flex-end;
+            border-bottom: 2px solid black;
+            padding: 10px 0;
+        }
+        .total-box {
+            width: 300px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
         }
-
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .empty-rows td {
-            border-left: 2px solid #000;
-            border-right: 2px solid #000;
-            border-bottom: 1px solid #ddd;
-            padding: 15px 8px;
-        }
-
         @media print {
-            body {
-                padding: 10px;
-            }
+            body { padding: 10px; }
         }
     </style>
 </head>
 <body>
-    <div class="mobile-numbers">{{PHONE}}</div>
-    <div class="business-name">**{{BUSINESS_NAME}}**</div>
-    <div class="address">{{ADDRESS}}</div>
-    <div class="email">&lt;{{EMAIL}}&gt;</div>
-    
-    <div class="invoice-header">
-        <div class="invoice-details">
-            <div class="invoice-details-left"><strong>Bill no.:</strong> {{BILL_NO}}</div>
-            <div class="invoice-details-right"><strong>Date:</strong> {{DATE}}</div>
+    <div class="container">
+        <div class="header">
+            <div class="phone">{{PHONE}}</div>
+            <div class="business-name">{{BUSINESS_NAME}}</div>
+            <div class="address">{{ADDRESS}}</div>
+            <div class="email">{{EMAIL}}</div>
         </div>
-    </div>
-    
-    <div class="customer-section">
-        <span class="customer-label">M/S:</span> {{CUSTOMER_NAME}}
-    </div>
-    
-    <table class="items-table">
-        <thead>
+
+        <table class="header-table">
             <tr>
-                <th style="width: 8%;">Sr. No.</th>
-                <th style="width: 44%;">Description</th>
-                <th style="width: 12%;">Quantity</th>
-                <th style="width: 18%;">Rate</th>
-                <th style="width: 18%;">Amount</th>
+                <td class="bill-line">
+                    <div class="bill-details">
+                        <div><strong>Bill no.:</strong> {{BILL_NO}}</div>
+                        <div><strong>Date:</strong> {{DATE}}</div>
+                    </div>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            {{ITEMS_TABLE}}
-            <tr class="empty-rows">
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
+            <tr>
+                <td class="customer-line">
+                    <strong>M/S: ....................</strong>
+                    <span style="margin-left: 20px;">{{CUSTOMER_NAME}}</span>
+                </td>
             </tr>
-            <tr class="empty-rows">
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
+        </table>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width:8%">Sr. No.</th>
+                    <th style="width:44%">Description</th>
+                    <th style="width:12%">Quantity</th>
+                    <th style="width:18%">Rate</th>
+                    <th style="width:18%">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ITEMS_TABLE}}
+                <tr>
+                    <td colspan="5" class="empty-space"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table style="width:100%; border-collapse: collapse;">
+            <tr>
+                <td class="words-line" style="width:70%;">
+                    <strong>Rupees (in words):</strong> {{AMOUNT_WORDS}}
+                </td>
+                <td style="border-bottom: 2px solid black; padding: 10px 0; width:30%;">
+                    <div class="total-section">
+                        <div class="total-box">
+                            <span>Total Amount</span>
+                            <span>₹ {{TOTAL}}</span>
+                        </div>
+                    </div>
+                </td>
             </tr>
-        </tbody>
-    </table>
-    
-    <div class="amount-words">
-        <strong>Rupees (in words):</strong> {{AMOUNT_WORDS}}
-    </div>
-    
-    <div class="total-section">
-        <span><strong>Total Amount</strong></span>
-        <span><strong>**₹{{TOTAL}}**</strong></span>
-    </div>
-    
-    <div class="footer">
-        Thank you for your business!
+        </table>
     </div>
 </body>
 </html>`;
 }
 
-export default function Preview({ navigation, route }: Props) {
+export default function Preview({ navigation }: Props) {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [businessDetails, setBusinessDetails] = useState<BusinessDetails | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [invoiceHTML, setInvoiceHTML] = useState<string>("");
 
     useFocusEffect(
         useCallback(() => {
@@ -370,13 +314,18 @@ export default function Preview({ navigation, route }: Props) {
     );
 
     function viewInvoice(invoice: Invoice) {
+        if (!businessDetails) return;
+
         setSelectedInvoice(invoice);
+        const html = generateInvoiceHTML(invoice, businessDetails);
+        setInvoiceHTML(html);
         setShowPreview(true);
     }
 
     function closePreview() {
         setShowPreview(false);
         setSelectedInvoice(null);
+        setInvoiceHTML("");
     }
 
     function deleteInvoice(id: string) {
@@ -407,9 +356,6 @@ export default function Preview({ navigation, route }: Props) {
     }
 
     function generateInvoiceHTML(invoice: Invoice, business: BusinessDetails): string {
-        console.log("🎨 Generating invoice HTML from embedded template");
-
-        // Get the embedded template
         let html = getInvoiceTemplate();
 
         // Replace business details
@@ -447,9 +393,6 @@ export default function Preview({ navigation, route }: Props) {
         const amountWords = amountToWords(invoice.totalPaise / 100);
         html = html.replace(/\{\{AMOUNT_WORDS\}\}/g, amountWords);
 
-        console.log("✅ HTML generation complete");
-        console.log("📄 Template is being used correctly");
-
         return html;
     }
 
@@ -461,22 +404,14 @@ export default function Preview({ navigation, route }: Props) {
 
         setIsGeneratingPDF(true);
         try {
-            console.log("🔍 Generating PDF for invoice:", selectedInvoice.billNo);
-            console.log("📱 Platform:", Platform.OS);
-
             const html = generateInvoiceHTML(selectedInvoice, businessDetails);
 
             // WEB-SPECIFIC: If running on web, use browser print
             if (Platform.OS === 'web') {
-                console.log("🌐 Web platform detected - using browser print");
-
-                // Create a new window with the HTML
                 const printWindow = window.open('', '_blank');
                 if (printWindow) {
                     printWindow.document.write(html);
                     printWindow.document.close();
-
-                    // Wait for content to load, then trigger print
                     printWindow.onload = () => {
                         printWindow.print();
                     };
@@ -485,15 +420,10 @@ export default function Preview({ navigation, route }: Props) {
                 }
             } else {
                 // MOBILE: Use expo-print
-                console.log("📱 Mobile platform - using expo-print");
-                console.log("🖨️ Calling Print.printToFileAsync...");
-
                 const { uri } = await Print.printToFileAsync({
                     html,
                     base64: false,
                 });
-
-                console.log('✅ PDF generated at:', uri);
 
                 const isAvailable = await Sharing.isAvailableAsync();
 
@@ -508,15 +438,15 @@ export default function Preview({ navigation, route }: Props) {
                 }
             }
         } catch (error) {
-            console.error('❌ PDF generation error:', error);
+            console.error('PDF generation error:', error);
             Alert.alert("Error", "Failed to generate PDF. Please try again.");
         } finally {
             setIsGeneratingPDF(false);
         }
     }
 
-    // Preview mode
-    if (showPreview && selectedInvoice && businessDetails) {
+    // Preview mode - Now using WebView to show HTML
+    if (showPreview && selectedInvoice && businessDetails && invoiceHTML) {
         return (
             <SafeAreaView style={styles.safe}>
                 <View style={styles.previewHeader}>
@@ -534,71 +464,13 @@ export default function Preview({ navigation, route }: Props) {
                     </Pressable>
                 </View>
 
-                <ScrollView style={styles.previewScroll} contentContainerStyle={styles.previewContent}>
-                    <View style={styles.invoiceDoc}>
-                        <View style={styles.docHeader}>
-                            <View>
-                                <Text style={styles.bizName}>{businessDetails.businessName}</Text>
-                                <Text style={styles.bizInfo}>{businessDetails.address}</Text>
-                                <Text style={styles.bizInfo}>Phone: {businessDetails.phone}</Text>
-                                <Text style={styles.bizInfo}>Email: {businessDetails.email}</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.invoiceTitle}>
-                            <Text style={styles.invoiceTitleText}>INVOICE</Text>
-                        </View>
-
-                        <View style={styles.detailsRow}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.detailLabel}>Bill To:</Text>
-                                <Text style={styles.detailValue}>{selectedInvoice.customerName}</Text>
-                            </View>
-                            <View style={{ alignItems: "flex-end" }}>
-                                <Text style={styles.detailLabel}>Invoice No:</Text>
-                                <Text style={styles.detailValue}>{selectedInvoice.billNo}</Text>
-                                <Text style={styles.detailLabel}>Date:</Text>
-                                <Text style={styles.detailValue}>{selectedInvoice.date}</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.table}>
-                            <View style={styles.tableHeader}>
-                                <Text style={[styles.tableHeaderText, { flex: 2 }]}>Service</Text>
-                                <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "center" }]}>Qty</Text>
-                                <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>Rate</Text>
-                                <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>Amount</Text>
-                            </View>
-
-                            {selectedInvoice.items.map((item, idx) => {
-                                const amount = item.ratePaise * item.quantity;
-                                return (
-                                    <View
-                                        key={item.id}
-                                        style={[
-                                            styles.tableRow,
-                                            idx === selectedInvoice.items.length - 1 && styles.tableRowLast,
-                                        ]}
-                                    >
-                                        <Text style={[styles.tableCell, { flex: 2 }]}>{item.serviceName}</Text>
-                                        <Text style={[styles.tableCell, { flex: 1, textAlign: "center" }]}>{item.quantity}</Text>
-                                        <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>₹{(item.ratePaise / 100).toFixed(2)}</Text>
-                                        <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>₹{(amount / 100).toFixed(2)}</Text>
-                                    </View>
-                                );
-                            })}
-                        </View>
-
-                        <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>Total Amount:</Text>
-                            <Text style={styles.totalValue}>₹{(selectedInvoice.totalPaise / 100).toFixed(2)}</Text>
-                        </View>
-
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>Thank you for your business!</Text>
-                        </View>
-                    </View>
-                </ScrollView>
+                <WebView
+                    style={styles.webview}
+                    source={{ html: invoiceHTML }}
+                    originWhitelist={['*']}
+                    scalesPageToFit={true}
+                    showsVerticalScrollIndicator={true}
+                />
             </SafeAreaView>
         );
     }
@@ -670,26 +542,5 @@ const styles = StyleSheet.create({
     pdfBtn: { backgroundColor: "#0b74ff", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
     pdfBtnDisabled: { backgroundColor: "#93c5fd" },
     pdfBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-    previewScroll: { flex: 1 },
-    previewContent: { padding: 16 },
-    invoiceDoc: { backgroundColor: "#fff", borderRadius: 12, padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 5 },
-    docHeader: { borderBottomWidth: 2, borderBottomColor: "#e5e7eb", paddingBottom: 16, marginBottom: 16 },
-    bizName: { fontSize: 20, fontWeight: "800", color: "#111827", marginBottom: 8 },
-    bizInfo: { fontSize: 12, color: "#6b7280", marginTop: 2 },
-    invoiceTitle: { alignItems: "center", marginBottom: 20 },
-    invoiceTitleText: { fontSize: 28, fontWeight: "900", color: "#111827", letterSpacing: 2 },
-    detailsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 24 },
-    detailLabel: { fontSize: 11, color: "#6b7280", fontWeight: "600", marginBottom: 4 },
-    detailValue: { fontSize: 14, color: "#111827", fontWeight: "700" },
-    table: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, overflow: "hidden", marginBottom: 20 },
-    tableHeader: { flexDirection: "row", backgroundColor: "#f3f4f6", padding: 12, borderBottomWidth: 2, borderBottomColor: "#e5e7eb" },
-    tableHeaderText: { fontSize: 12, fontWeight: "800", color: "#374151" },
-    tableRow: { flexDirection: "row", padding: 12, borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
-    tableRowLast: { borderBottomWidth: 0 },
-    tableCell: { fontSize: 13, color: "#111827" },
-    totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#f3f4f6", padding: 16, borderRadius: 8, marginBottom: 24 },
-    totalLabel: { fontSize: 16, fontWeight: "800", color: "#374151" },
-    totalValue: { fontSize: 22, fontWeight: "900", color: "#0b74ff" },
-    footer: { alignItems: "center", paddingTop: 16, borderTopWidth: 1, borderTopColor: "#e5e7eb" },
-    footerText: { fontSize: 13, color: "#6b7280", fontStyle: "italic" },
+    webview: { flex: 1, backgroundColor: "#f9fafb" },
 });
