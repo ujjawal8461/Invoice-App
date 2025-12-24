@@ -356,44 +356,293 @@ export default function Preview({ navigation }: Props) {
     }
 
     function generateInvoiceHTML(invoice: Invoice, business: BusinessDetails): string {
-        let html = getInvoiceTemplate();
-
-        // Replace business details
-        html = html.replace(/\{\{BUSINESS_NAME\}\}/g, business.businessName);
-        html = html.replace(/\{\{ADDRESS\}\}/g, business.address);
-        html = html.replace(/\{\{PHONE\}\}/g, business.phone.replace(/\n/g, '<br>'));
-        html = html.replace(/\{\{EMAIL\}\}/g, business.email);
-
-        // Replace invoice details
-        html = html.replace(/\{\{BILL_NO\}\}/g, invoice.billNo);
-        html = html.replace(/\{\{DATE\}\}/g, invoice.date);
-        html = html.replace(/\{\{CUSTOMER_NAME\}\}/g, invoice.customerName);
-
         // Generate items table rows
-        const itemsHTML = invoice.items.map((item, index) => {
+        const itemsRows = invoice.items.map((item, index) => {
             const amount = item.ratePaise * item.quantity;
             return `
                 <tr>
-                    <td class="center">${index + 1}</td>
-                    <td>${item.serviceName}</td>
-                    <td class="center">${item.quantity}</td>
-                    <td class="right">₹${(item.ratePaise / 100).toFixed(2)}</td>
-                    <td class="right">₹${(amount / 100).toFixed(2)}</td>
-                </tr>
-            `;
+                    <td style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 12px;">${index + 1}</td>
+                    <td style="border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 12px;">${item.serviceName}</td>
+                    <td style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 12px;">${item.quantity}</td>
+                    <td style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 12px;">${(item.ratePaise / 100).toFixed(0)}</td>
+                    <td style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 12px;">${(amount / 100).toFixed(0)}</td>
+                </tr>`;
         }).join('');
 
-        html = html.replace(/\{\{ITEMS_TABLE\}\}/g, itemsHTML);
-
-        // Replace total
-        const totalAmount = (invoice.totalPaise / 100).toFixed(2);
-        html = html.replace(/\{\{TOTAL\}\}/g, totalAmount);
-
-        // Replace amount in words
+        // Calculate total
+        const totalAmount = (invoice.totalPaise / 100).toFixed(0);
         const amountWords = amountToWords(invoice.totalPaise / 100);
-        html = html.replace(/\{\{AMOUNT_WORDS\}\}/g, amountWords);
 
-        return html;
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice ${invoice.billNo}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            width: 100%;
+            max-width: 190mm;
+            margin: 0 auto;
+            padding: 0;
+            background: white;
+        }
+        
+        .invoice-container {
+            width: 100%;
+            border: 2.5px solid #000;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 277mm;
+        }
+        
+        /* Header Section */
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding: 10px 12px 8px 12px;
+            position: relative;
+        }
+        
+        .phone-numbers {
+            text-align: right;
+            font-size: 10px;
+            line-height: 1.4;
+            margin-bottom: 3px;
+            font-weight: normal;
+        }
+        
+        .business-name {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+            margin-bottom: 6px;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.1;
+        }
+        
+        .address {
+            font-size: 11px;
+            margin-bottom: 3px;
+            font-weight: normal;
+            line-height: 1.3;
+        }
+        
+        .email {
+            font-size: 11px;
+            color: #0066cc;
+            text-decoration: underline;
+            font-weight: normal;
+        }
+        
+        /* Bill Info Section */
+        .bill-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 12px;
+            border-bottom: 2px solid #000;
+            font-size: 12px;
+        }
+        
+        .bill-info strong {
+            font-weight: bold;
+        }
+        
+        /* Customer Section */
+        .customer-section {
+            padding: 8px 12px;
+            border-bottom: 2px solid #000;
+            font-size: 12px;
+        }
+        
+        .customer-section strong {
+            font-weight: bold;
+        }
+        
+        .customer-name {
+            margin-left: 15px;
+        }
+        
+        /* Table Section */
+        .table-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .items-table {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .items-table thead {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        .items-table tbody {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        .items-table th {
+            border: 1px solid #000;
+            padding: 7px 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            background: white;
+        }
+        
+        .items-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-size: 12px;
+        }
+        
+        /* Empty space row */
+        .spacer-row td {
+            height: 450px !important;
+            padding: 0 !important;
+            vertical-align: top;
+        }
+        
+        /* Bottom Section */
+        .bottom-section {
+            border-top: 1px solid #000;
+            display: flex;
+            height: 45px;
+        }
+        
+        .words-section {
+            flex: 1;
+            padding: 8px 12px;
+            border-right: 1px solid #000;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .words-section strong {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .total-section {
+            width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        
+        .total-section strong {
+            font-weight: bold;
+        }
+        
+        .total-amount {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+            
+            .invoice-container {
+                page-break-inside: avoid;
+                border: 2.5px solid #000;
+            }
+            
+            @page {
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="phone-numbers">
+                ${business.phone.replace(/\n/g, '<br>')}
+            </div>
+            <div class="business-name">${business.businessName}</div>
+            <div class="address">${business.address}</div>
+            <div class="email">${business.email}</div>
+        </div>
+        
+        <!-- Bill Info -->
+        <div class="bill-info">
+            <div><strong>Bill no.:</strong> ${invoice.billNo}</div>
+            <div><strong>Date:</strong> ${invoice.date}</div>
+        </div>
+        
+        <!-- Customer -->
+        <div class="customer-section">
+            <strong>M/S:</strong>
+            <span class="customer-name">${invoice.customerName}</span>
+        </div>
+        
+        <!-- Items Table -->
+        <div class="table-container">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">Sr. No.</th>
+                        <th style="width: 44%;">Description</th>
+                        <th style="width: 12%;">Quantity</th>
+                        <th style="width: 18%;">Rate</th>
+                        <th style="width: 18%;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsRows}
+                    <tr class="spacer-row">
+                        <td colspan="5" style="border: 1px solid #000;"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Bottom Section -->
+        <div class="bottom-section">
+            <div class="words-section">
+                <strong>Rupees (in words):</strong> <span>${amountWords}</span>
+            </div>
+            <div class="total-section">
+                <strong>Total Amount</strong>
+                <span class="total-amount">₹${totalAmount}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
     }
 
     async function generatePDF() {
